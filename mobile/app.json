@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "SiteVoice AI",
+    "slug": "sitevoice-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "sitevoice",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.systra.sitevoiceai",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "SiteVoice AI needs microphone access to record voice updates from construction sites."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#2563EB",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.systra.sitevoiceai",
+      "permissions": [
+        "RECORD_AUDIO"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow SiteVoice AI to access your microphone for voice recording."
+        }
+      ],
+      "expo-secure-store",
+      "expo-status-bar",
+      "expo-font",
+      "expo-asset"
+    ]
+  }
+}
