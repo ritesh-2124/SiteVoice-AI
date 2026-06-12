@@ -7,6 +7,7 @@ mobile/node_modules/
 
 mobile/android/.cxx/
 mobile/android/app/build/
+mobile/android/*
 
 .env
 .env.*
