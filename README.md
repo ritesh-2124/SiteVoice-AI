@@ -1,31 +1,410 @@
-# SiteVoice AI — Implementation Plan
+# 🏗️ SiteVoice AI
 
-A production-ready cross-platform mobile app for construction site engineers to record voice updates, transcribe audio via OpenAI Whisper, extract structured project data via Gemini AI, and generate automated daily progress reports.
+> **AI-powered voice reporting for construction sites** — Record → Transcribe → Extract → Report
 
-## User Review Required
-
-> [!IMPORTANT]
-> **Expo vs Bare React Native CLI**: Based on current best practices (2026), Expo is now the officially recommended approach for React Native. It supports custom native modules via Config Plugins/Prebuild while simplifying builds and OTA updates. I recommend using **Expo** with `expo-audio` for recording. If you have a strong preference for bare React Native CLI, please let me know.
-
-> [!IMPORTANT]
-> **Sequelize Version**: Sequelize v7 has native TypeScript support with decorators. I'll use **Sequelize v6** (stable, widely adopted) with `sequelize-typescript` for decorator-based models unless you prefer v7 (still in alpha/beta). Please confirm.
-
-> [!WARNING]
-> **API Keys Required**: The app requires API keys for OpenAI (Whisper) and Google Gemini. These must be configured in `.env` files. No keys will be hardcoded.
-
-> [!IMPORTANT]
-> **Audio File Storage**: Audio files will be stored on the local filesystem (configurable path via env var). For production, you'd typically use S3/GCS. I'll build the storage layer with an abstraction that makes it easy to swap to cloud storage. Please confirm this approach.
-
-## Open Questions
-
-1. **Push Notification Provider**: Should we use Firebase Cloud Messaging (FCM) for push notifications, or do you have another preference (e.g., Expo Push Notifications)?
-2. **Email Service**: For forgot password flow, which email provider? (e.g., SendGrid, AWS SES, Nodemailer with SMTP)
-3. **Deployment Target**: Are you targeting Docker Compose for local/staging, or do you need Kubernetes manifests as well?
-4. **Audio Format**: Expo-audio records in `.m4a` by default. Whisper supports `m4a, mp3, wav, webm`. Shall we stick with `.m4a`?
+A production-ready cross-platform mobile app for construction site engineers to record voice updates, transcribe audio via **OpenAI Whisper**, extract structured project data via **Google Gemini AI**, and generate automated daily progress reports.
 
 ---
 
-## Architecture Overview
+## ✨ Features
+
+- 🎙️ **Voice Recording** — Record site updates directly from your phone with pause/resume support
+- 🔊 **AI Transcription** — Automatic speech-to-text via OpenAI Whisper (supports English & Hindi)
+- 🤖 **Smart Data Extraction** — Gemini AI extracts structured data (block, floor, activity, workers, materials, risks) from transcripts
+- 📊 **Automated Reports** — Daily / Weekly / Monthly progress reports generated automatically
+- 👥 **Role-Based Access** — Site Engineer, Project Manager, and Admin roles with granular permissions
+- 🔐 **Secure Auth** — JWT access + refresh tokens, password reset flow
+- 📱 **Cross-Platform** — React Native (Expo) app for iOS & Android
+- 🐳 **Docker Ready** — One-command backend + PostgreSQL setup
+
+---
+
+## 🔄 How It Works
+
+```
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│   🎙️ Record   │────▶│  📝 Whisper   │────▶│  🤖 Gemini    │────▶│  📊 Report   │
+│  Voice Note  │     │ Transcription│     │  Extraction  │     │  Generated   │
+└──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
+```
+
+1. **Record** — Site engineer records a voice update from the mobile app
+2. **Upload** — Audio file is uploaded to the backend via HTTPS
+3. **Transcribe** — OpenAI Whisper converts audio to text
+4. **Extract** — Gemini AI parses the transcript into structured data (block, floor, activity, completion %, materials, risks)
+5. **Review** — Engineer previews and edits the extracted data
+6. **Submit** — Report is submitted for PM approval
+7. **Dashboard** — Aggregated progress visible to PMs and Admins
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Mobile** | React Native (Expo SDK 56), Expo Router, Zustand, React Query, React Hook Form + Zod |
+| **Backend** | Node.js, Express, TypeScript, Sequelize ORM |
+| **Database** | PostgreSQL 16 |
+| **AI** | OpenAI Whisper (transcription), Google Gemini 2.0 Flash (data extraction) |
+| **Auth** | JWT (access + refresh tokens), bcrypt |
+| **DevOps** | Docker Compose, Winston logging |
+
+---
+
+## 📁 Project Structure
+
+```
+SiteVoice-AI/
+├── mobile/                          # React Native (Expo) App
+│   ├── app/                         # Expo Router screens
+│   │   ├── (auth)/                  # Login, Register, Forgot Password
+│   │   ├── (app)/                   # Authenticated screens
+│   │   │   ├── (tabs)/             # Home, Projects, Reports, Profile
+│   │   │   ├── project/            # Project details & voice recording
+│   │   │   ├── transcript/         # Transcript preview & editing
+│   │   │   ├── report/             # Report detail & approval
+│   │   │   └── admin/              # User & project management
+│   │   └── _layout.tsx
+│   ├── src/
+│   │   ├── components/             # UI, Audio, Charts, Layout
+│   │   ├── features/               # Auth, Projects, Recording, Reports, Admin
+│   │   ├── hooks/                  # Custom hooks
+│   │   ├── services/               # Axios API client & endpoint definitions
+│   │   ├── stores/                 # Zustand auth store
+│   │   ├── theme/                  # Color palette, typography, spacing
+│   │   ├── types/                  # TypeScript interfaces
+│   │   └── utils/                  # Helper utilities
+│   └── package.json
+│
+├── backend/                         # Node.js / Express API
+│   ├── src/
+│   │   ├── config/                 # DB, env, Swagger config
+│   │   ├── controllers/            # Auth, Project, Voice, Transcript, Report, Dashboard, Admin
+│   │   ├── middleware/             # Auth, RBAC, Validation, Upload, Error, RateLimit, Logger
+│   │   ├── models/                 # 11 Sequelize models (User, Project, Audio, Transcript, etc.)
+│   │   ├── routes/                 # RESTful API routes (v1)
+│   │   ├── services/               # Business logic + AI integrations (Whisper, Gemini)
+│   │   ├── repositories/          # Data access layer
+│   │   ├── validators/            # Zod request schemas
+│   │   ├── utils/                 # Logger, errors, response helpers
+│   │   └── types/                 # TypeScript declarations
+│   ├── migrations/                 # Sequelize migrations
+│   ├── seeders/                    # Database seeders
+│   ├── uploads/                    # Audio file storage (gitignored)
+│   └── Dockerfile
+│
+├── docker-compose.yml              # PostgreSQL + Backend + pgAdmin
+├── .env.example                    # Environment template
+└── README.md
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Node.js** ≥ 18
+- **Docker & Docker Compose** (for PostgreSQL)
+- **Expo CLI** (`npm install -g expo-cli`)
+- **API Keys**: [OpenAI](https://platform.openai.com/api-keys) + [Google Gemini](https://aistudio.google.com/apikey)
+
+### 1. Clone & Configure
+
+```bash
+git clone https://github.com/your-username/SiteVoice-AI.git
+cd SiteVoice-AI
+
+# Copy env template and fill in your values
+cp .env.example .env
+```
+
+Edit `.env` and set the required values:
+```env
+# Required API keys
+OPENAI_API_KEY=sk-...
+GEMINI_API_KEY=AI...
+
+# Database
+DB_PASSWORD=your_secure_password
+
+# JWT
+JWT_SECRET=your_jwt_secret_here
+```
+
+### 2. Start Database (Docker)
+
+```bash
+# Start PostgreSQL only
+docker-compose up -d postgres
+
+# Or start with pgAdmin for DB management (dev)
+docker-compose --profile dev up -d
+```
+
+- **PostgreSQL**: `localhost:5432`
+- **pgAdmin** (dev profile): `localhost:5050` — Login: `admin@sitevoice.ai` / `admin123`
+
+### 3. Start Backend
+
+```bash
+cd backend
+npm install
+
+# Run database migrations
+npm run db:migrate
+
+# (Optional) Seed sample data
+npm run db:seed
+
+# Start dev server
+npm run dev
+```
+
+Backend runs at `http://localhost:3000`. Swagger docs available at `http://localhost:3000/api-docs`.
+
+### 4. Start Mobile App
+
+```bash
+cd mobile
+npm install
+
+# Start Expo dev server
+npx expo start
+```
+
+Scan the QR code with Expo Go (Android/iOS) or press `a` for Android emulator / `i` for iOS simulator.
+
+---
+
+## 🔑 Environment Variables
+
+| Variable | Description | Required |
+|----------|------------|----------|
+| `NODE_ENV` | `development` / `production` | ✅ |
+| `PORT` | Backend port (default: `3000`) | |
+| `DB_HOST` | PostgreSQL host | ✅ |
+| `DB_PORT` | PostgreSQL port (default: `5432`) | |
+| `DB_NAME` | Database name | ✅ |
+| `DB_USER` | Database user | ✅ |
+| `DB_PASSWORD` | Database password | ✅ |
+| `JWT_SECRET` | Secret for signing JWTs | ✅ |
+| `JWT_ACCESS_EXPIRY` | Access token expiry (default: `15m`) | |
+| `JWT_REFRESH_EXPIRY` | Refresh token expiry (default: `7d`) | |
+| `OPENAI_API_KEY` | OpenAI API key (Whisper) | ✅ |
+| `GEMINI_API_KEY` | Google Gemini API key | ✅ |
+| `GEMINI_MODEL` | Gemini model (default: `gemini-2.0-flash`) | |
+| `UPLOAD_DIR` | Audio upload directory (default: `./uploads`) | |
+| `MAX_FILE_SIZE` | Max upload size in bytes (default: `26214400` / 25MB) | |
+| `SMTP_HOST` | SMTP server for emails | |
+| `SMTP_PORT` | SMTP port | |
+| `SMTP_USER` | SMTP username | |
+| `SMTP_PASS` | SMTP password | |
+| `FROM_EMAIL` | Sender email address | |
+| `FRONTEND_URL` | Mobile app URL | |
+
+---
+
+## 📡 API Endpoints
+
+### Authentication
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/v1/auth/register` | Register new user | No |
+| POST | `/api/v1/auth/login` | Login | No |
+| POST | `/api/v1/auth/logout` | Logout (revoke refresh token) | Yes |
+| POST | `/api/v1/auth/refresh-token` | Refresh access token | No |
+| POST | `/api/v1/auth/forgot-password` | Send reset email | No |
+| POST | `/api/v1/auth/reset-password` | Reset password with token | No |
+| GET | `/api/v1/auth/me` | Get current user profile | Yes |
+| PUT | `/api/v1/auth/change-password` | Change password | Yes |
+
+### Projects
+| Method | Endpoint | Description | Roles |
+|--------|----------|-------------|-------|
+| GET | `/api/v1/projects` | List projects (by membership) | All |
+| GET | `/api/v1/projects/:id` | Get project details | Members |
+| POST | `/api/v1/projects` | Create project | PM, Admin |
+| PUT | `/api/v1/projects/:id` | Update project | PM, Admin |
+| DELETE | `/api/v1/projects/:id` | Delete project | Admin |
+| POST | `/api/v1/projects/:id/members` | Add member | PM, Admin |
+| DELETE | `/api/v1/projects/:id/members/:userId` | Remove member | PM, Admin |
+
+### Voice Upload & AI Pipeline
+| Method | Endpoint | Description | Roles |
+|--------|----------|-------------|-------|
+| POST | `/api/v1/voice/upload` | Upload audio file | Engineer |
+| GET | `/api/v1/voice/uploads` | List user's uploads | All |
+| GET | `/api/v1/voice/uploads/:id` | Get upload details | Owner |
+| POST | `/api/v1/voice/uploads/:id/process` | Trigger AI processing | Engineer |
+| DELETE | `/api/v1/voice/uploads/:id` | Delete upload | Owner |
+
+### Transcripts
+| Method | Endpoint | Description | Roles |
+|--------|----------|-------------|-------|
+| GET | `/api/v1/transcripts/:id` | Get transcript | Owner, PM |
+| PUT | `/api/v1/transcripts/:id` | Edit transcript | Owner |
+| POST | `/api/v1/transcripts/:id/reprocess` | Re-extract data | Owner |
+
+### Reports
+| Method | Endpoint | Description | Roles |
+|--------|----------|-------------|-------|
+| GET | `/api/v1/reports` | List reports (with filters) | All |
+| GET | `/api/v1/reports/:id` | Get report details | Members |
+| PUT | `/api/v1/reports/:id` | Update/approve report | PM |
+| POST | `/api/v1/reports/:id/submit` | Submit draft report | Engineer |
+| GET | `/api/v1/reports/daily` | Daily aggregated report | PM, Admin |
+| GET | `/api/v1/reports/weekly` | Weekly aggregated report | PM, Admin |
+| GET | `/api/v1/reports/monthly` | Monthly aggregated report | PM, Admin |
+
+### Dashboard
+| Method | Endpoint | Description | Roles |
+|--------|----------|-------------|-------|
+| GET | `/api/v1/dashboard/overview` | Dashboard stats | All |
+| GET | `/api/v1/dashboard/projects/:id/progress` | Project progress | Members |
+| GET | `/api/v1/dashboard/risks` | Risks overview | PM, Admin |
+| GET | `/api/v1/dashboard/activities` | Pending activities | PM, Admin |
+| GET | `/api/v1/dashboard/timeline` | Activity timeline | All |
+
+### Admin
+| Method | Endpoint | Description | Roles |
+|--------|----------|-------------|-------|
+| GET | `/api/v1/admin/users` | List all users | Admin |
+| PUT | `/api/v1/admin/users/:id` | Update user | Admin |
+| DELETE | `/api/v1/admin/users/:id` | Deactivate user | Admin |
+| PUT | `/api/v1/admin/users/:id/role` | Change user role | Admin |
+| GET | `/api/v1/admin/audit-logs` | View audit logs | Admin |
+
+---
+
+## 🤖 AI Pipeline
+
+### Step 1: Whisper Transcription
+```
+Audio File (.m4a) → OpenAI Whisper API → Raw Transcript Text
+```
+- **Model**: `whisper-1` (or `gpt-4o-transcribe` for higher quality)
+- **Max file size**: 25MB (chunked if larger)
+- **Language**: Auto-detect (primarily English/Hindi)
+
+### Step 2: Gemini Structured Extraction
+
+The transcript is sent to Gemini with a construction-domain system prompt. It extracts:
+
+```json
+{
+  "block_name": "Block A",
+  "floor_number": "3rd Floor",
+  "activity": "Column shuttering",
+  "completion_percentage": 75,
+  "worker_count": 12,
+  "start_time": "08:00",
+  "end_time": "17:00",
+  "material_usage": [
+    { "material": "Steel", "quantity": "2.5", "unit": "tonnes" }
+  ],
+  "weather_condition": "Cloudy",
+  "issues": [
+    { "description": "Rebar delivery delayed", "severity": "medium", "category": "schedule" }
+  ],
+  "safety_incidents": [],
+  "notes": "Concrete pour scheduled for tomorrow",
+  "report_date": "2026-06-12"
+}
+```
+
+---
+
+## 🗄️ Database Schema
+
+### Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    Users ||--o{ ProjectMembers : "has many"
+    Users ||--o{ AudioUploads : "uploads"
+    Users ||--o{ Notifications : "receives"
+    Users ||--o{ RefreshTokens : "has many"
+    Users ||--o{ AuditLogs : "performs"
+
+    Projects ||--o{ ProjectMembers : "has many"
+    Projects ||--o{ AudioUploads : "has many"
+    Projects ||--o{ ProgressReports : "has many"
+    Projects ||--o{ Activities : "has many"
+    Projects ||--o{ Risks : "has many"
+
+    AudioUploads ||--|| VoiceTranscripts : "has one"
+    VoiceTranscripts ||--|| ProgressReports : "generates"
+    ProgressReports ||--o{ Activities : "contains"
+    ProgressReports ||--o{ Risks : "identifies"
+
+    Users {
+        uuid id PK
+        string firstName
+        string lastName
+        string email UK
+        string password
+        enum role "site_engineer|project_manager|admin"
+        string phone
+        string avatar
+        boolean isActive
+        timestamp lastLogin
+    }
+
+    Projects {
+        uuid id PK
+        string name
+        string code UK
+        string description
+        string location
+        date startDate
+        date endDate
+        enum status "planning|active|on_hold|completed"
+        json metadata
+    }
+
+    AudioUploads {
+        uuid id PK
+        uuid projectId FK
+        uuid userId FK
+        string fileName
+        string filePath
+        integer fileSize
+        integer duration
+        enum status "uploading|uploaded|processing|completed|failed"
+    }
+
+    VoiceTranscripts {
+        uuid id PK
+        uuid audioUploadId FK
+        text rawTranscript
+        text editedTranscript
+        float confidence
+        string language
+        enum status "pending|completed|failed"
+    }
+
+    ProgressReports {
+        uuid id PK
+        uuid projectId FK
+        uuid transcriptId FK
+        uuid userId FK
+        string blockName
+        string floorNumber
+        string activity
+        float completionPercentage
+        integer workerCount
+        json materialUsage
+        date reportDate
+        enum status "draft|submitted|approved|rejected"
+    }
+```
+
+**All 11 Models**: User, Project, ProjectMember, AudioUpload, VoiceTranscript, ProgressReport, Activity, Risk, Notification, RefreshToken, AuditLog
+
+---
+
+## 🏗️ Architecture Overview
 
 ```mermaid
 graph TB
@@ -72,462 +451,73 @@ graph TB
 
 ---
 
-## Project Structure
+## 🐳 Docker
 
-```
-SiteVoice.AI/
-├── mobile/                          # React Native (Expo) App
-│   ├── app/                         # Expo Router screens
-│   │   ├── (auth)/                  # Auth group
-│   │   │   ├── login.tsx
-│   │   │   ├── register.tsx
-│   │   │   ├── forgot-password.tsx
-│   │   │   └── _layout.tsx
-│   │   ├── (app)/                   # Authenticated group
-│   │   │   ├── (tabs)/              # Tab navigator
-│   │   │   │   ├── index.tsx        # Home Dashboard
-│   │   │   │   ├── projects.tsx     # Project List
-│   │   │   │   ├── reports.tsx      # Reports
-│   │   │   │   ├── profile.tsx      # Profile
-│   │   │   │   └── _layout.tsx
-│   │   │   ├── project/
-│   │   │   │   ├── [id].tsx         # Project Details
-│   │   │   │   └── record/[id].tsx  # Voice Recording
-│   │   │   ├── transcript/
-│   │   │   │   └── [id].tsx         # Transcript Preview/Edit
-│   │   │   ├── admin/               # Admin screens
-│   │   │   │   ├── users.tsx
-│   │   │   │   ├── manage-projects.tsx
-│   │   │   │   └── roles.tsx
-│   │   │   └── _layout.tsx
-│   │   └── _layout.tsx              # Root layout
-│   ├── src/
-│   │   ├── components/              # Reusable UI components
-│   │   │   ├── ui/                  # Base components (Button, Input, Card...)
-│   │   │   ├── audio/               # Audio recording components
-│   │   │   ├── charts/              # Chart/graph components
-│   │   │   └── layout/              # Layout components
-│   │   ├── features/                # Feature-specific logic
-│   │   │   ├── auth/
-│   │   │   ├── projects/
-│   │   │   ├── recording/
-│   │   │   ├── reports/
-│   │   │   └── admin/
-│   │   ├── hooks/                   # Custom hooks
-│   │   ├── services/                # API service layer (Axios)
-│   │   ├── stores/                  # Zustand stores
-│   │   ├── types/                   # TypeScript types/interfaces
-│   │   ├── utils/                   # Utility functions
-│   │   ├── constants/               # App constants
-│   │   └── theme/                   # Theme configuration
-│   ├── assets/                      # Fonts, images, icons
-│   ├── app.json                     # Expo config
-│   ├── tsconfig.json
-│   └── package.json
-│
-├── backend/                         # Node.js / Express API
-│   ├── src/
-│   │   ├── config/                  # DB, env, app config
-│   │   │   ├── database.ts
-│   │   │   ├── environment.ts
-│   │   │   └── swagger.ts
-│   │   ├── controllers/             # Request handlers
-│   │   │   ├── auth.controller.ts
-│   │   │   ├── project.controller.ts
-│   │   │   ├── voice.controller.ts
-│   │   │   ├── transcript.controller.ts
-│   │   │   ├── report.controller.ts
-│   │   │   ├── dashboard.controller.ts
-│   │   │   ├── admin.controller.ts
-│   │   │   └── notification.controller.ts
-│   │   ├── middleware/              # Express middleware
-│   │   │   ├── auth.middleware.ts
-│   │   │   ├── role.middleware.ts
-│   │   │   ├── validation.middleware.ts
-│   │   │   ├── upload.middleware.ts
-│   │   │   ├── error.middleware.ts
-│   │   │   ├── rateLimiter.middleware.ts
-│   │   │   └── logger.middleware.ts
-│   │   ├── models/                  # Sequelize models
-│   │   │   ├── User.ts
-│   │   │   ├── Project.ts
-│   │   │   ├── ProjectMember.ts
-│   │   │   ├── AudioUpload.ts
-│   │   │   ├── VoiceTranscript.ts
-│   │   │   ├── ProgressReport.ts
-│   │   │   ├── Risk.ts
-│   │   │   ├── Activity.ts
-│   │   │   ├── Notification.ts
-│   │   │   ├── AuditLog.ts
-│   │   │   ├── RefreshToken.ts
-│   │   │   └── index.ts             # Model associations
-│   │   ├── routes/                  # API routes
-│   │   │   ├── auth.routes.ts
-│   │   │   ├── project.routes.ts
-│   │   │   ├── voice.routes.ts
-│   │   │   ├── transcript.routes.ts
-│   │   │   ├── report.routes.ts
-│   │   │   ├── dashboard.routes.ts
-│   │   │   ├── admin.routes.ts
-│   │   │   └── index.ts
-│   │   ├── services/                # Business logic
-│   │   │   ├── auth.service.ts
-│   │   │   ├── project.service.ts
-│   │   │   ├── voice.service.ts
-│   │   │   ├── transcript.service.ts
-│   │   │   ├── whisper.service.ts
-│   │   │   ├── gemini.service.ts
-│   │   │   ├── report.service.ts
-│   │   │   ├── dashboard.service.ts
-│   │   │   ├── notification.service.ts
-│   │   │   └── auditLog.service.ts
-│   │   ├── repositories/            # Data access layer
-│   │   │   ├── user.repository.ts
-│   │   │   ├── project.repository.ts
-│   │   │   ├── voice.repository.ts
-│   │   │   └── report.repository.ts
-│   │   ├── validators/              # Zod schemas
-│   │   │   ├── auth.validator.ts
-│   │   │   ├── project.validator.ts
-│   │   │   ├── voice.validator.ts
-│   │   │   └── report.validator.ts
-│   │   ├── utils/                   # Helpers
-│   │   │   ├── logger.ts
-│   │   │   ├── errors.ts
-│   │   │   ├── response.ts
-│   │   │   └── helpers.ts
-│   │   ├── types/                   # TypeScript interfaces
-│   │   │   ├── express.d.ts
-│   │   │   ├── api.types.ts
-│   │   │   └── ai.types.ts
-│   │   ├── app.ts                   # Express app setup
-│   │   └── server.ts                # Server entry point
-│   ├── migrations/                  # Sequelize migrations
-│   ├── seeders/                     # Database seeders
-│   ├── uploads/                     # Audio file storage (gitignored)
-│   ├── logs/                        # App logs (gitignored)
-│   ├── .sequelizerc
-│   ├── tsconfig.json
-│   ├── package.json
-│   └── Dockerfile
-│
-├── docker-compose.yml               # Docker orchestration
-├── .env.example                     # Environment template
-├── .gitignore
-└── README.md
+```bash
+# Full stack (PostgreSQL + Backend)
+docker-compose up -d
+
+# With pgAdmin (dev only)
+docker-compose --profile dev up -d
+
+# Stop all services
+docker-compose down
+
+# Stop and remove data volumes
+docker-compose down -v
 ```
 
 ---
 
-## Database Design
+## 📜 Available Scripts
 
-### Entity Relationship Diagram
+### Backend (`/backend`)
 
-```mermaid
-erDiagram
-    Users ||--o{ ProjectMembers : "has many"
-    Users ||--o{ AudioUploads : "uploads"
-    Users ||--o{ Notifications : "receives"
-    Users ||--o{ RefreshTokens : "has many"
-    Users ||--o{ AuditLogs : "performs"
+| Script | Command | Description |
+|--------|---------|-------------|
+| Dev Server | `npm run dev` | Start with hot-reload (ts-node-dev) |
+| Build | `npm run build` | Compile TypeScript to `dist/` |
+| Start | `npm start` | Run compiled JS (production) |
+| Lint | `npm run lint` | ESLint check |
+| Type Check | `npm run typecheck` | TypeScript type verification |
+| Migrate | `npm run db:migrate` | Run pending migrations |
+| Undo Migration | `npm run db:migrate:undo` | Revert last migration |
+| Seed | `npm run db:seed` | Populate sample data |
+| Undo Seeds | `npm run db:seed:undo` | Remove seeded data |
 
-    Projects ||--o{ ProjectMembers : "has many"
-    Projects ||--o{ AudioUploads : "has many"
-    Projects ||--o{ ProgressReports : "has many"
-    Projects ||--o{ Activities : "has many"
-    Projects ||--o{ Risks : "has many"
+### Mobile (`/mobile`)
 
-    AudioUploads ||--|| VoiceTranscripts : "has one"
-    VoiceTranscripts ||--|| ProgressReports : "generates"
-    ProgressReports ||--o{ Activities : "contains"
-    ProgressReports ||--o{ Risks : "identifies"
-
-    Users {
-        uuid id PK
-        string firstName
-        string lastName
-        string email UK
-        string password
-        enum role "site_engineer|project_manager|admin"
-        string phone
-        string avatar
-        boolean isActive
-        timestamp lastLogin
-        timestamp createdAt
-        timestamp updatedAt
-    }
-
-    Projects {
-        uuid id PK
-        string name
-        string code UK
-        string description
-        string location
-        date startDate
-        date endDate
-        enum status "planning|active|on_hold|completed"
-        json metadata
-        uuid createdBy FK
-        timestamp createdAt
-        timestamp updatedAt
-    }
-
-    ProjectMembers {
-        uuid id PK
-        uuid projectId FK
-        uuid userId FK
-        enum role "engineer|manager|viewer"
-        timestamp joinedAt
-        timestamp createdAt
-    }
-
-    AudioUploads {
-        uuid id PK
-        uuid projectId FK
-        uuid userId FK
-        string fileName
-        string filePath
-        string mimeType
-        integer fileSize
-        integer duration
-        enum status "uploading|uploaded|processing|completed|failed"
-        string errorMessage
-        timestamp createdAt
-        timestamp updatedAt
-    }
-
-    VoiceTranscripts {
-        uuid id PK
-        uuid audioUploadId FK
-        text rawTranscript
-        text editedTranscript
-        float confidence
-        string language
-        boolean isEdited
-        enum status "pending|completed|failed"
-        timestamp processedAt
-        timestamp createdAt
-        timestamp updatedAt
-    }
-
-    ProgressReports {
-        uuid id PK
-        uuid projectId FK
-        uuid transcriptId FK
-        uuid userId FK
-        string blockName
-        string floorNumber
-        string activity
-        float completionPercentage
-        integer workerCount
-        json materialUsage
-        string weatherCondition
-        date reportDate
-        time startTime
-        time endTime
-        text notes
-        enum status "draft|submitted|approved|rejected"
-        json extractedData
-        timestamp createdAt
-        timestamp updatedAt
-    }
-
-    Activities {
-        uuid id PK
-        uuid projectId FK
-        uuid reportId FK
-        string name
-        string description
-        enum status "not_started|in_progress|completed|delayed"
-        float completionPercentage
-        date plannedDate
-        date actualDate
-        timestamp createdAt
-        timestamp updatedAt
-    }
-
-    Risks {
-        uuid id PK
-        uuid projectId FK
-        uuid reportId FK
-        uuid reportedBy FK
-        string title
-        text description
-        enum severity "low|medium|high|critical"
-        enum category "safety|quality|schedule|cost|environmental"
-        enum status "open|mitigated|closed"
-        text mitigation
-        timestamp createdAt
-        timestamp updatedAt
-    }
-
-    Notifications {
-        uuid id PK
-        uuid userId FK
-        string title
-        text message
-        enum type "info|warning|alert|report"
-        json data
-        boolean isRead
-        timestamp readAt
-        timestamp createdAt
-    }
-
-    RefreshTokens {
-        uuid id PK
-        uuid userId FK
-        string token UK
-        timestamp expiresAt
-        boolean isRevoked
-        timestamp createdAt
-    }
-
-    AuditLogs {
-        uuid id PK
-        uuid userId FK
-        string action
-        string entity
-        uuid entityId
-        json oldValues
-        json newValues
-        string ipAddress
-        timestamp createdAt
-    }
-```
+| Script | Command | Description |
+|--------|---------|-------------|
+| Start | `npm start` | Expo dev server |
+| Android | `npm run android` | Run on Android device/emulator |
+| iOS | `npm run ios` | Run on iOS simulator |
+| Web | `npm run web` | Run in web browser |
 
 ---
 
-## API Design
+## 👥 Roles & Permissions
 
-### Authentication APIs
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| POST | `/api/v1/auth/register` | Register new user | No |
-| POST | `/api/v1/auth/login` | Login | No |
-| POST | `/api/v1/auth/logout` | Logout (revoke refresh token) | Yes |
-| POST | `/api/v1/auth/refresh-token` | Refresh access token | No |
-| POST | `/api/v1/auth/forgot-password` | Send reset email | No |
-| POST | `/api/v1/auth/reset-password` | Reset password with token | No |
-| GET | `/api/v1/auth/me` | Get current user profile | Yes |
-| PUT | `/api/v1/auth/change-password` | Change password | Yes |
-
-### Project APIs
-| Method | Endpoint | Description | Roles |
-|--------|----------|-------------|-------|
-| GET | `/api/v1/projects` | List projects (filtered by user membership) | All |
-| GET | `/api/v1/projects/:id` | Get project details | Members |
-| POST | `/api/v1/projects` | Create project | PM, Admin |
-| PUT | `/api/v1/projects/:id` | Update project | PM, Admin |
-| DELETE | `/api/v1/projects/:id` | Delete project | Admin |
-| POST | `/api/v1/projects/:id/members` | Add member | PM, Admin |
-| DELETE | `/api/v1/projects/:id/members/:userId` | Remove member | PM, Admin |
-
-### Voice Upload APIs
-| Method | Endpoint | Description | Roles |
-|--------|----------|-------------|-------|
-| POST | `/api/v1/voice/upload` | Upload audio file | Engineer |
-| GET | `/api/v1/voice/uploads` | List user's uploads | All |
-| GET | `/api/v1/voice/uploads/:id` | Get upload details | Owner |
-| POST | `/api/v1/voice/uploads/:id/process` | Trigger AI processing | Engineer |
-| DELETE | `/api/v1/voice/uploads/:id` | Delete upload | Owner |
-
-### Transcript APIs
-| Method | Endpoint | Description | Roles |
-|--------|----------|-------------|-------|
-| GET | `/api/v1/transcripts/:id` | Get transcript | Owner, PM |
-| PUT | `/api/v1/transcripts/:id` | Edit transcript | Owner |
-| POST | `/api/v1/transcripts/:id/reprocess` | Re-extract data from edited transcript | Owner |
-
-### Report APIs
-| Method | Endpoint | Description | Roles |
-|--------|----------|-------------|-------|
-| GET | `/api/v1/reports` | List reports (with filters) | All |
-| GET | `/api/v1/reports/:id` | Get report details | Members |
-| PUT | `/api/v1/reports/:id` | Update/approve report | PM |
-| POST | `/api/v1/reports/:id/submit` | Submit draft report | Engineer |
-| GET | `/api/v1/reports/daily` | Daily aggregated report | PM, Admin |
-| GET | `/api/v1/reports/weekly` | Weekly aggregated report | PM, Admin |
-| GET | `/api/v1/reports/monthly` | Monthly aggregated report | PM, Admin |
-
-### Dashboard APIs
-| Method | Endpoint | Description | Roles |
-|--------|----------|-------------|-------|
-| GET | `/api/v1/dashboard/overview` | Dashboard stats | All |
-| GET | `/api/v1/dashboard/projects/:id/progress` | Project progress | Members |
-| GET | `/api/v1/dashboard/risks` | Risks overview | PM, Admin |
-| GET | `/api/v1/dashboard/activities` | Pending activities | PM, Admin |
-| GET | `/api/v1/dashboard/timeline` | Activity timeline | All |
-
-### Admin APIs
-| Method | Endpoint | Description | Roles |
-|--------|----------|-------------|-------|
-| GET | `/api/v1/admin/users` | List all users | Admin |
-| PUT | `/api/v1/admin/users/:id` | Update user | Admin |
-| DELETE | `/api/v1/admin/users/:id` | Deactivate user | Admin |
-| PUT | `/api/v1/admin/users/:id/role` | Change user role | Admin |
-| GET | `/api/v1/admin/audit-logs` | View audit logs | Admin |
+| Feature | Site Engineer | Project Manager | Admin |
+|---------|:------------:|:---------------:|:-----:|
+| Record voice updates | ✅ | — | — |
+| View own transcripts | ✅ | ✅ | ✅ |
+| Edit transcripts | ✅ | — | — |
+| Submit reports | ✅ | — | — |
+| Approve/reject reports | — | ✅ | ✅ |
+| View project dashboard | ✅ | ✅ | ✅ |
+| Create projects | — | ✅ | ✅ |
+| Manage project members | — | ✅ | ✅ |
+| User management | — | — | ✅ |
+| View audit logs | — | — | ✅ |
 
 ---
 
-## AI Pipeline
+## 📋 Implementation Plan (Phased Execution)
 
-### Whisper Integration
-```
-Audio File (.m4a) → OpenAI Whisper API → Raw Transcript Text
-```
-- Model: `whisper-1` (or `gpt-4o-transcribe` for better quality)
-- Max file size: 25MB (chunk if larger)
-- Language: Auto-detect (primarily English/Hindi)
+> The following documents the full development roadmap. Completed phases are marked; remaining phases are in progress or planned.
 
-### Gemini Structured Extraction
-
-**System Prompt:**
-```
-You are a construction site progress data extraction assistant. 
-Given a voice transcript from a construction site engineer, extract structured information.
-
-Rules:
-1. Extract ALL mentioned activities, blocks, floors, and worker counts
-2. If information is not mentioned, set the field to null
-3. Normalize activity names to standard construction terminology
-4. Convert time references to 24-hour format (HH:MM)
-5. Identify any safety incidents or risks mentioned
-6. Calculate completion percentage from context clues
-7. List all materials mentioned with quantities if available
-
-Return valid JSON matching the provided schema.
-```
-
-**Response Schema (enforced via Gemini `responseSchema`):**
-```json
-{
-  "block_name": "string | null",
-  "floor_number": "string | null",
-  "activity": "string | null",
-  "completion_percentage": "number | null",
-  "worker_count": "number | null",
-  "start_time": "string | null",
-  "end_time": "string | null",
-  "material_usage": [
-    { "material": "string", "quantity": "string", "unit": "string" }
-  ],
-  "weather_condition": "string | null",
-  "issues": [
-    { "description": "string", "severity": "low|medium|high|critical", "category": "string" }
-  ],
-  "safety_incidents": [
-    { "description": "string", "severity": "string" }
-  ],
-  "notes": "string | null",
-  "report_date": "string | null"
-}
-```
-
----
-
-## Proposed Changes (Phased Execution)
-
-### Phase 1: Project Scaffolding & Configuration
+### Phase 1: Project Scaffolding & Configuration ✅
 
 #### [NEW] Root Configuration Files
 - `docker-compose.yml` — PostgreSQL + Backend services
@@ -549,7 +539,7 @@ Return valid JSON matching the provided schema.
 
 ---
 
-### Phase 2: Database Layer
+### Phase 2: Database Layer ✅
 
 #### [NEW] Sequelize Models
 All 11 models with full TypeScript types:
@@ -567,7 +557,7 @@ One migration per table with proper foreign keys, indexes, and constraints.
 
 ---
 
-### Phase 3: Backend Core — Auth & Middleware
+### Phase 3: Backend Core — Auth & Middleware ✅
 
 #### [NEW] Middleware Stack
 - `auth.middleware.ts` — JWT verification
@@ -587,7 +577,7 @@ One migration per table with proper foreign keys, indexes, and constraints.
 
 ---
 
-### Phase 4: Backend Core — Business Logic
+### Phase 4: Backend Core — Business Logic ✅
 
 #### [NEW] Project Management
 - `project.controller.ts` + `project.service.ts` + `project.routes.ts`
@@ -614,7 +604,7 @@ One migration per table with proper foreign keys, indexes, and constraints.
 
 ---
 
-### Phase 5: Mobile App — Foundation
+### Phase 5: Mobile App — Foundation ✅
 
 #### [NEW] Theme & Design System
 - Color palette, typography, spacing
@@ -623,18 +613,18 @@ One migration per table with proper foreign keys, indexes, and constraints.
 
 #### [NEW] Navigation & Auth Flow
 - Expo Router layout files
-- Auth screens: Splash, Login, Register, Forgot Password
+- Auth screens: Login, Register, Forgot Password
 - Secure token storage with `expo-secure-store`
 - Auth state management with Zustand
 
 #### [NEW] API Service Layer
 - Axios instance with interceptors (auth token, refresh, error handling)
-- React Query configuration and query/mutation hooks
-- Offline detection and queue
+- Endpoint definitions for all API routes
+- React Query configuration
 
 ---
 
-### Phase 6: Mobile App — Core Features
+### Phase 6: Mobile App — Core Features ✅
 
 #### [NEW] Dashboard & Projects
 - Home dashboard with stats cards, charts, recent activity
@@ -652,11 +642,11 @@ One migration per table with proper foreign keys, indexes, and constraints.
 - Transcript preview with edit capability
 - Structured data display
 - Report submission flow
-- Daily/Weekly/Monthly report views
+- Daily/Weekly/Monthly report views with filters
 
 ---
 
-### Phase 7: Mobile App — Advanced Features
+### Phase 7: Mobile App — Advanced Features 🔲
 
 #### [NEW] Profile & Settings
 - Edit profile, change password
@@ -675,7 +665,7 @@ One migration per table with proper foreign keys, indexes, and constraints.
 
 ---
 
-### Phase 8: Docker, Documentation & Polish
+### Phase 8: Docker, Documentation & Polish 🔲
 
 #### [NEW] Docker Configuration
 - `backend/Dockerfile` — Multi-stage build
@@ -683,35 +673,12 @@ One migration per table with proper foreign keys, indexes, and constraints.
 - Environment-based configuration
 
 #### [NEW] Documentation
-- `README.md` — Complete project documentation
-- API documentation via Swagger
+- Complete API documentation via Swagger
 - Deployment guide
 - Development setup guide
 
 ---
 
-## Verification Plan
+## 📄 License
 
-### Automated Tests
-```bash
-# Backend
-cd backend && npm run build     # TypeScript compilation
-cd backend && npm run lint      # Linting
-cd backend && npm test          # Unit tests (services, validators)
-
-# Mobile
-cd mobile && npx expo lint      # Linting
-cd mobile && npm run typecheck  # TypeScript type checking
-```
-
-### Manual Verification
-1. **Docker**: Run `docker-compose up` and verify PostgreSQL + Backend startup
-2. **API Testing**: Use Swagger UI to test all endpoints
-3. **Mobile**: Run `npx expo start` and test on iOS/Android simulator
-4. **AI Pipeline**: Test with sample audio upload → transcription → extraction flow
-5. **Auth Flow**: Test login → token refresh → logout cycle
-6. **Role-Based Access**: Verify endpoint restrictions per role
-
-### Browser Testing
-- Test Swagger documentation UI
-- Verify API responses with sample data
+This project is private and unlicensed.
